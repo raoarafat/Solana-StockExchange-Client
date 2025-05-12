@@ -5,6 +5,8 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { WalletProvider } from '@/hooks/use-wallet';
+import { SolanaWalletProvider } from './components/wallet/WalletProvider';
+import { Navbar } from './components/layout/Navbar';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -16,9 +18,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <head>
@@ -34,17 +36,22 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        <WalletProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-            <Toaster />
-          </ThemeProvider>
-        </WalletProvider>
+        <SolanaWalletProvider>
+          <WalletProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="light"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <div className="min-h-screen bg-background">
+                <Navbar />
+                <main className="container mx-auto px-4 py-8">{children}</main>
+              </div>
+              <Toaster />
+            </ThemeProvider>
+          </WalletProvider>
+        </SolanaWalletProvider>
       </body>
     </html>
   );

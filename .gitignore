@@ -51,3 +51,5 @@ next-env.d.ts
 .temp/
 .tmp/
 
+/se_solana/node_modules
+/se_solana/target/*

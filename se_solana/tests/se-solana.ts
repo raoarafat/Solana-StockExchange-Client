@@ -1,16 +1,16 @@
-import * as anchor from '@coral-xyz/anchor';
-import { Program } from '@coral-xyz/anchor';
-import { SeSolana } from '../target/types/se_solana';
+// import * as anchor from '@coral-xyz/anchor';
+// import { Program } from '@coral-xyz/anchor';
+// import { SeStock } from '../target/types/stock_exchange';
 
-describe('se-solana', () => {
-  // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.env());
+// describe('se-solana', () => {
+//   // Configure the client to use the local cluster.
+//   anchor.setProvider(anchor.AnchorProvider.env());
 
-  const program = anchor.workspace.seSolana as Program<SeSolana>;
+//   const program = anchor.workspace.seSolana as Program<SeSolana>;
 
-  it('Is initialized!', async () => {
-    // Add your test here.
-    const tx = await program.methods.initialize().rpc();
-    console.log('Your transaction signature', tx);
-  });
-});
+//   it('Is initialized!', async () => {
+//     // Add your test here.
+//     const tx = await program.methods.initialize().rpc();
+//     console.log('Your transaction signature', tx);
+//   });
+// });

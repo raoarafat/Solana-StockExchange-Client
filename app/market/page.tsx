@@ -1,6 +1,7 @@
 'use client';
 
 import { CompanyList } from '../components/market/CompanyList';
+import { TransactionHistory } from '../components/market/TransactionHistory';
 
 export default function MarketPage() {
   return (
@@ -15,14 +16,26 @@ export default function MarketPage() {
           </div>
         </div>
 
-        {/* Main Market Table */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Market Overview
-            </h2>
+        <div className="space-y-6">
+          {/* Main Market Table */}
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Market Overview
+              </h2>
+            </div>
+            <CompanyList />
           </div>
-          <CompanyList />
+
+          {/* Transaction History */}
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Transaction History
+              </h2>
+            </div>
+            <TransactionHistory />
+          </div>
         </div>
       </div>
     </div>

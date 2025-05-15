@@ -8,7 +8,7 @@ import { PublicKey } from '@solana/web3.js';
 import idl from '../../se_solana/target/idl/se_solana.json';
 
 const PROGRAM_ID = new PublicKey(
-  '3YDfMYSa9Q4KZM6jghRQ6T1U7L2rMg6z61cvc6VHTn98'
+  '4DqV3aQQDizyGUUbvtkJoNxChzbed1BT9Csrb8FtjhSx'
 );
 
 export default function SolanaTestPage() {
@@ -27,9 +27,19 @@ export default function SolanaTestPage() {
       const provider = new AnchorProvider(connection, wallet as any, {
         commitment: 'confirmed',
       });
+      console.log('provider meee: ', provider);
+      console.log('PROGRAM_ID meee: ', PROGRAM_ID);
       const program = new Program(idl as any, PROGRAM_ID, provider);
-      const tx = await program.methods.initialize().rpc();
+      console.log('program in me: ', program);
+      const tx = await program.methods
+        .initialize()
+        .accounts({
+          signer: wallet.publicKey,
+        })
+        .rpc();
+      console.log('program tx: ', tx);
       setTxSig(tx);
+      console.log('program tsetTxSig done: ');
     } catch (err: any) {
       setError(err.message || String(err));
     }

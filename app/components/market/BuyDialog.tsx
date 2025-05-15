@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useStockExchange } from '@/app/lib/solana';
+import { toast } from 'sonner';
 
 interface BuyDialogProps {
   isOpen: boolean;
@@ -24,6 +26,7 @@ interface BuyDialogProps {
 
 export function BuyDialog({ isOpen, onClose, company }: BuyDialogProps) {
   const wallet = useWallet();
+  const { buyStock } = useStockExchange();
   const [quantity, setQuantity] = useState<string>('1');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -31,19 +34,24 @@ export function BuyDialog({ isOpen, onClose, company }: BuyDialogProps) {
 
   const handleBuy = async () => {
     if (!wallet.publicKey) {
-      alert('Please connect your wallet first');
+      toast.error('Please connect your wallet first');
       return;
     }
 
     try {
       setIsLoading(true);
-      // TODO: Implement actual buy logic here
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulated delay
-      alert('Order placed successfully!');
+      const tx = await buyStock(
+        company.symbol,
+        Number(quantity),
+        company.currentPrice * 100 // Convert to cents for Solana
+      );
+
+      toast.success('Order placed successfully!');
+      console.log('Transaction:', tx);
       onClose();
     } catch (error) {
       console.error('Error placing order:', error);
-      alert('Failed to place order. Please try again.');
+      toast.error('Failed to place order. Please try again.');
     } finally {
       setIsLoading(false);
     }

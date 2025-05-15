@@ -43,7 +43,7 @@ export function BuyDialog({ isOpen, onClose, company }: BuyDialogProps) {
       const tx = await buyStock(
         company.symbol,
         Number(quantity),
-        company.currentPrice * 100 // Convert to cents for Solana
+        Number(company.currentPrice * 100) // Convert to cents for Solana
       );
 
       toast.success('Order placed successfully!');

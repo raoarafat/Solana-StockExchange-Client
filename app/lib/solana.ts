@@ -11,7 +11,7 @@ const PROGRAM_ID = new PublicKey(
 // Define the Transaction account type based on your IDL
 interface TransactionAccount {
   user: PublicKey;
-  company: string;
+  company: number[];
   amount: BN;
   price: BN;
   isBuy: boolean;
@@ -26,6 +26,9 @@ export interface Transaction {
   isBuy: boolean;
   timestamp: number;
 }
+
+// Helper function to add delay
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const useStockExchange = () => {
   const { connection } = useConnection();
@@ -62,35 +65,92 @@ export const useStockExchange = () => {
     }
   };
 
-  const getTransactions = async (): Promise<Transaction[]> => {
+  const getTransactions = async (
+    limit: number = 10
+  ): Promise<Transaction[]> => {
     try {
-      console.log('program strt: ');
-      const program = getProgram();
-      console.log('program me: ');
-      const transactions = await program.account.transaction.all([
-        {
-          memcmp: {
-            offset: 8, // Skip the account discriminator
-            bytes: wallet.publicKey?.toBase58() || '',
-          },
-        },
-      ]);
+      if (!wallet.publicKey) throw new Error('Wallet not connected');
 
-      return transactions.map((tx) => {
-        const account = tx.account as unknown as TransactionAccount;
-        return {
-          user: account.user,
-          company: account.company,
-          amount: account.amount.toNumber(),
-          price: account.price.toNumber(),
-          isBuy: account.isBuy,
-          timestamp: account.timestamp.toNumber(),
-        };
+      console.log('init getTransactions');
+      const program = getProgram();
+
+      console.log('success getTransactions');
+
+      // Get transaction accounts for the current user only
+      const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+        filters: [
+          {
+            dataSize: 8 + 32 + 32 + 8 + 8 + 1 + 8, // Size of Transaction account
+          },
+          {
+            memcmp: {
+              offset: 8, // Skip discriminator
+              bytes: wallet.publicKey.toBase58(), // Filter by user's public key
+            },
+          },
+        ],
+        commitment: 'confirmed',
       });
+
+      console.log('accounts: ', accounts);
+
+      // Process accounts
+      const transactions = await Promise.all(
+        accounts.map(async (account) => {
+          try {
+            const tx = await program.account.transaction.fetch(account.pubkey);
+            const accountData = tx as unknown as TransactionAccount;
+
+            // Convert company bytes to string
+            const companyBytes = new Uint8Array(accountData.company);
+            const companyString = new TextDecoder()
+              .decode(companyBytes)
+              .replace(/\0/g, '');
+
+            return {
+              user: accountData.user,
+              company: companyString,
+              amount: accountData.amount.toNumber(),
+              price: accountData.price.toNumber(),
+              isBuy: accountData.isBuy,
+              timestamp: accountData.timestamp.toNumber(),
+            };
+          } catch (error) {
+            console.error('Error processing transaction:', error);
+            return null;
+          }
+        })
+      );
+
+      console.log('finish transactions fetch ');
+
+      // Filter out null values and sort by timestamp (newest first)
+      var txn = transactions
+        .filter((tx): tx is Transaction => tx !== null)
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, limit);
+
+      console.log('done transactions: ', transactions);
+
+      return txn;
     } catch (error) {
       console.error('Error fetching transactions:', error);
       throw error;
     }
+  };
+
+  const getBuyTransactions = async (
+    limit: number = 10
+  ): Promise<Transaction[]> => {
+    const transactions = await getTransactions(limit);
+    return transactions.filter((tx) => tx.isBuy);
+  };
+
+  const getSellTransactions = async (
+    limit: number = 10
+  ): Promise<Transaction[]> => {
+    const transactions = await getTransactions(limit);
+    return transactions.filter((tx) => !tx.isBuy);
   };
 
   const buyStock = async (company: string, amount: number, price: number) => {
@@ -99,14 +159,25 @@ export const useStockExchange = () => {
       const transaction = web3.Keypair.generate();
       if (!wallet.publicKey) throw new Error('Wallet not connected');
 
+      console.log(
+        'web3.SystemProgram.programId: ',
+        web3.SystemProgram.programId
+      );
+
       const tx = await program.methods
-        .buy_stock(company, new BN(amount), new BN(price))
+        .buyStock(company, new BN(amount), new BN(price))
+        // .accounts({
+        //   transaction: transaction.publicKey,
+        //   user: wallet.publicKey,
+        //   system_program: web3.SystemProgram.programId,
+        // })
+        // .signers([])
         .accounts({
           transaction: transaction.publicKey,
           user: wallet.publicKey,
-          systemProgram: web3.SystemProgram.programId,
+          system_program: web3.SystemProgram.programId,
         })
-        .signers([transaction])
+        .signers([])
         .rpc();
 
       return tx;
@@ -123,7 +194,7 @@ export const useStockExchange = () => {
       if (!wallet.publicKey) throw new Error('Wallet not connected');
 
       const tx = await program.methods
-        .sell_stock(company, new BN(amount), new BN(price))
+        .sellStock(company, new BN(amount), new BN(price))
         .accounts({
           transaction: transaction.publicKey,
           user: wallet.publicKey,
@@ -143,5 +214,7 @@ export const useStockExchange = () => {
     buyStock,
     sellStock,
     getTransactions,
+    getBuyTransactions,
+    getSellTransactions,
   };
 };

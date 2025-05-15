@@ -1,23 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useStockExchange, Transaction } from '@/app/lib/solana';
+import { useStockExchange, Transaction } from '../../lib/solana';
 import { useWallet } from '@solana/wallet-adapter-react';
 
 export function TransactionHistory() {
   const { getTransactions } = useStockExchange();
-  const wallet = useWallet();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { publicKey } = useWallet();
 
   useEffect(() => {
-    if (!wallet.publicKey) return;
-
     const fetchTransactions = async () => {
+      if (!publicKey) return;
+
       try {
-        setIsLoading(true);
-        const txs = await getTransactions();
-        setTransactions(txs);
+        //setIsLoading(true);
+        // const txs = await getTransactions(20); // Fetch last 20 transactions
+        // setTransactions(txs);
       } catch (error) {
         console.error('Error fetching transactions:', error);
       } finally {
@@ -26,12 +26,9 @@ export function TransactionHistory() {
     };
 
     fetchTransactions();
-    // Set up polling for new transactions
-    const interval = setInterval(fetchTransactions, 10000); // Poll every 10 seconds
-    return () => clearInterval(interval);
-  }, [wallet.publicKey, getTransactions]);
+  }, [publicKey, getTransactions]); // Only re-fetch if wallet changes
 
-  if (!wallet.publicKey) {
+  if (!publicKey) {
     return (
       <div className="p-4 text-center text-gray-500">
         Connect your wallet to view transactions

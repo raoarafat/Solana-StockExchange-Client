@@ -1,6 +1,14 @@
-import { Program, AnchorProvider, web3, BN, Idl } from '@project-serum/anchor';
+import {
+  Program,
+  AnchorProvider,
+  web3,
+  BN,
+  Idl,
+  AnchorError,
+  Wallet,
+} from '@project-serum/anchor';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
+import { clusterApiUrl, Connection, PublicKey } from '@solana/web3.js';
 // import { IDL } from '../../../se_solana/target/types/stock_exchange';
 import idl from '../../se_solana/target/idl/se_solana.json';
 // Program ID - Replace with your deployed program ID
@@ -32,12 +40,14 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const useStockExchange = () => {
   const { connection } = useConnection();
+  //const connection = new Connection(clusterApiUrl('devnet'), 'processed'); // or passed from props/context
   const wallet = useWallet();
 
   const getProvider = () => {
     if (!wallet.publicKey) throw new Error('Wallet not connected');
     return new AnchorProvider(connection, wallet as any, {
-      commitment: 'confirmed',
+      //commitment: 'confirmed',
+      preflightCommitment: 'processed',
     });
   };
 
@@ -50,9 +60,14 @@ export const useStockExchange = () => {
 
   const getProgram = () => {
     if (!wallet.publicKey) throw new Error('Connect your wallet first!');
-    const provider = new AnchorProvider(connection, wallet as any, {
-      commitment: 'confirmed',
-    });
+    const provider = new AnchorProvider(
+      connection,
+      wallet as unknown as Wallet,
+      {
+        // commitment: 'confirmed',
+        preflightCommitment: 'processed',
+      }
+    );
     console.log('provider: ', provider);
     console.log('PROGRAM_ID: ', PROGRAM_ID);
     try {
@@ -61,6 +76,55 @@ export const useStockExchange = () => {
       return program;
     } catch (error) {
       console.error('Error creating program:', error);
+      throw error;
+    }
+  };
+
+  const buyStock = async (company: string, amount: number, price: number) => {
+    try {
+      const program = getProgram();
+
+      if (!wallet.publicKey) throw new Error('Wallet not connected');
+
+      console.log('init buyStock');
+
+      console.log('🔐 Deriving PDA...');
+      const [transactionPda, bump] = await web3.PublicKey.findProgramAddress(
+        [Buffer.from('transaction'), wallet.publicKey.toBuffer()],
+        program.programId
+      );
+
+      console.log('start buyStock');
+
+      console.log('wallet.publicKey:', wallet.publicKey?.toBase58());
+      console.log('transactionPda:', transactionPda.toBase58());
+
+      console.log('📦 Sending buyStock transaction...');
+      const tx = await program.methods
+        .buyStock(company, new BN(amount), new BN(price))
+        .accounts({
+          transaction: transactionPda,
+          user: wallet.publicKey,
+          system_program: web3.SystemProgram.programId,
+        })
+        .signers([]) // if wallet is injected (e.g. Phantom), this stays empty
+        .rpc();
+
+      console.log('Transaction successful:', tx);
+      return tx;
+    } catch (error) {
+      console.error('Full Anchor error:', JSON.stringify(error, null, 2));
+
+      if (error instanceof AnchorError) {
+        console.error('AnchorError:', error.error.errorMessage);
+      } else if (
+        typeof error === 'object' &&
+        error !== null &&
+        'logs' in error
+      ) {
+        console.error('Transaction logs:', (error as { logs: unknown }).logs);
+      }
+
       throw error;
     }
   };
@@ -153,6 +217,7 @@ export const useStockExchange = () => {
     return transactions.filter((tx) => !tx.isBuy);
   };
 
+  /*
   const buyStock = async (company: string, amount: number, price: number) => {
     try {
       const program = getProgram();
@@ -166,18 +231,12 @@ export const useStockExchange = () => {
 
       const tx = await program.methods
         .buyStock(company, new BN(amount), new BN(price))
-        // .accounts({
-        //   transaction: transaction.publicKey,
-        //   user: wallet.publicKey,
-        //   system_program: web3.SystemProgram.programId,
-        // })
-        // .signers([])
         .accounts({
-          transaction: transaction.publicKey,
+          //transaction: transaction.publicKey,
           user: wallet.publicKey,
           system_program: web3.SystemProgram.programId,
         })
-        .signers([])
+        //.signers([signer: wallet.publicKey])
         .rpc();
 
       return tx;
@@ -186,6 +245,7 @@ export const useStockExchange = () => {
       throw error;
     }
   };
+  */
 
   const sellStock = async (company: string, amount: number, price: number) => {
     try {
@@ -200,7 +260,7 @@ export const useStockExchange = () => {
           user: wallet.publicKey,
           systemProgram: web3.SystemProgram.programId,
         })
-        .signers([transaction])
+        .signers([])
         .rpc();
 
       return tx;

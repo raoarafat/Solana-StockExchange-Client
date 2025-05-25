@@ -53,3 +53,4 @@ next-env.d.ts
 
 /se_solana/node_modules
 /se_solana/target/*
+config.bat
